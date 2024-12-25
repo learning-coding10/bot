@@ -223,7 +223,7 @@
         
 #         # Re-run to display updated chat history
 #         st.rerun()
-[9:57 pm, 25/12/2024] Anum Zeeshan: import openai
+import openai
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
