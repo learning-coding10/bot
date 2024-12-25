@@ -266,12 +266,18 @@ def extract_pdf_text(file_path):
 
 # Function to generate OpenAI response
 def chat_with_ai(user_question, chat_history, pdf_text):
-    combined_context = f"PDF Content:\n{pdf_text}"
+    # Initial greeting message
+    initial_greeting = "Hello! How can I assist you today?"
     messages = [{"role": "system", "content": "You are a helpful assistant. Use the provided content."}]
+
+    # Add greeting message if chat history is empty
+    if len(chat_history) == 0:
+        messages.append({"role": "assistant", "content": initial_greeting})
+    
     for entry in chat_history:
         messages.append({"role": "user", "content": entry['user']})
         messages.append({"role": "assistant", "content": entry['bot']})
-    messages.append({"role": "user", "content": f"{combined_context}\n\nQuestion: {user_question}"})
+    messages.append({"role": "user", "content": f"{pdf_text}\n\nQuestion: {user_question}"})
 
     try:
         response = openai.ChatCompletion.create(
