@@ -173,7 +173,7 @@ elif st.session_state['page'] == 'chat':
             <div style="
                 background-color: #78bae4; 
                 padding: 10px;
-                color: #fff !important;
+                color: #fff;
                 border-radius: 10px; 
                 margin-bottom: 10px;
                 width: fit-content;
@@ -192,7 +192,7 @@ elif st.session_state['page'] == 'chat':
             <div style="
                 background-color:  #D3D3D3; 
                 padding: 10px; 
-                color: #fff !important;
+                color: #fff;
                 border-radius: 10px; 
                 margin-bottom: 10px;
                 margin-left: auto;
