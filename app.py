@@ -268,7 +268,7 @@ def extract_pdf_text(file_path):
 def chat_with_ai(user_question, chat_history, pdf_text):
     # Initial greeting message
     initial_greeting = "Hello! How can I assist you today?"
-    messages = [{"role": "system", "content": "You are a helpful assistant. Use the provided content."}]
+    messages = [{"role": "system", "content": "You are a helpful assistant. please greet the user first and then Use the provided content."}]
     
     # Add greeting message if chat history is empty
     if len(chat_history) == 0:
