@@ -40,7 +40,7 @@ st.markdown(
         /* Specific styles for smaller screens (mobile) */
         @media screen and (max-width: 768px) {
             body {
-                color: black !important;
+                color: red !important;
             }
         }
     </style>
