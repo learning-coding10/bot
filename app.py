@@ -223,97 +223,319 @@
         
 #         # Re-run to display updated chat history
 #         st.rerun()
-import openai
+[9:57 pm, 25/12/2024] Anum Zeeshan: import openai
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email_validator import validate_email, EmailNotValidError
+from PyPDF2 import PdfReader
 import streamlit as st
+import os
 
-# Set your OpenAI API Key
+# ----------------------
+# Set Page Configuration
+# ----------------------
+st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
 
+# ----------------------
+# Inject Custom CSS for Chat Background Styling
+# ----------------------
+st.markdown(
+    """
+    <style>
+        .user-message {
+            background-color: #439DF6;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            width: fit-content;
+            max-width: 80%;
+            overflow: hidden;
+        }
+        .bot-message {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            margin-left: auto;
+            width: fit-content;
+            max-width: 80%;
+            overflow: hidden;
+        }
+        body {
+            background-color: #f4f4f9;
+            color: #333;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ----------------------
+# Functions
+# ----------------------
+
+# Function to extract PDF text
+def extract_pdf_text(file_path):
+    try:
+        reader = PdfReader(file_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        return text
+    except Exception as e:
+        st.error(f"Error reading PDF: {e}")
+        return "No content found."
+
+# Function to generate a response using OpenAI
+def chat_with_ai(user_question, pdf_text, chat_history):
+    combined_context = f"PDF Content:\n{pdf_text}"
+    messages = [{"role": "system", "content": "You are a helpful assistant using the provided PDF content."}]
+    for entry in chat_history:
+        messages.append({"role": "user", "content": entry['user']})
+        messages.append({"role": "assistant", "content": entry['bot']})
+    messages.append({"role": "user", "content": f"{combined_context}\n\nQuestion: {user_question}"})
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=256,
+            temperature=0.7,
+            stream=False
+        )
+        return response['choices'][0]['message']['content']
+    except Exception as e:
+        return f"Error generating response: {e}"
+
+# ----------------------
+# Streamlit App
+# ----------------------
+
+# Session State Initialization
+if "chat_history" not in st.session_state:
+    st.session_state['chat_history'] = []
+if "pdf_content" not in st.session_state:
+    st.session_state['pdf_content'] = None
+
+# File uploader for PDF
+st.sidebar.title("Upload PDF")
+uploaded_pdf = st.sidebar.file_uploader("Choose a PDF file", type=["pdf"])
+
+# Process PDF if uploaded
+if uploaded_pdf:
+    st.session_state['pdf_content'] = extract_pdf_text(uploaded_pdf)
+
+# Display PDF content or placeholder message
+st.sidebar.subheader("PDF Content")
+if st.session_state['pdf_content']:
+    st.sidebar.text_area("Extracted PDF Text", st.session_state['pdf_content'], height=200)
+else:
+    st.sidebar.info("Upload a PDF to display its content.")
+
+# Chat Interface
+st.title("Chat with PDF Assistant")
+
+# Display chat history with styled messages
+for entry in st.session_state['chat_history']:
+    # User Message
+    st.markdown(
+        f"""
+        <div class="user-message">
+            {entry['user']}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    # Assistant Message
+    st.markdown(
+        f"""
+        <div class="bot-message">
+            {entry['bot']}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Input field for user messages
+user_input = st.chat_input("Type your question here...")
+
+if user_input:
+    # Generate response based on PDF content
+    pdf_text = st.session_state['pdf_content'] if st.session_state['pdf_content'] else "No PDF content available."
+    bot_response = chat_with_ai(user_input, pdf_text, st.session_state['chat_history'])
+
+    # Append user query and bot response to chat history
+    st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
+
+    # Re-run to display updated chat
+    st.experimental_rerun()
+[10:01 pm, 25/12/2024] Anum Zeeshan: import streamlit as st
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from PyPDF2 import PdfReader
+import openai
+import os
+
+# ----------------------
+# Set Page Configuration (Must Be First Streamlit Command)
+# ----------------------
+st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
+
+# ----------------------
+# Load Environment Variables
+# ----------------------
+# Assuming you have environment variables set for sensitive data
+# SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+# SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
+# RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
 # openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# Hard-code the PDF path
+predefined_pdf_path = "./Aibytec fine tuned data.pdf"  # Replace with your actual PDF file path
 
+# ----------------------
+# Functions
+# ----------------------
 
-# RAG Chat Functionality
-def get_rag_response(question, context):
-    """
-    Generate a response using OpenAI with a custom context.
-    """
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": f"You are a chatbot specialized in answering questions using the provided context: {context}"},
-            {"role": "user", "content": question},
-        ],
-        max_tokens=2000,
-    )
-    return response['choices'][0]['message']['content']
-
-
-# Collect user data and send email
-def send_email(user_email, user_name, message):
-    """
-    Send user data to Gmail.
-    """
-    # Gmail credentials
-    gmail_user = "mohsin.razzaq2025@gmail.com"
-    gmail_password = "ztlg dqiz rmmd nkni"
-
-    # Create email
-    msg = MIMEMultipart()
-    msg['From'] = gmail_user
-    msg['To'] = gmail_user
-    msg['Subject'] = f"New Chatbot Interaction from {user_name}"
-    body = f"Name: {user_name}\nEmail: {user_email}\nMessage: {message}"
-    msg.attach(MIMEText(body, 'plain'))
-
-    # Send email
+# Extract Text from Hard-Coded PDF
+def extract_pdf_text(file_path):
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(gmail_user, gmail_password)
-        server.send_message(msg)
-        server.quit()
-        print("Email sent successfully!")
+        reader = PdfReader(file_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        return text
     except Exception as e:
-        print(f"Error: {e}")
+        st.error(f"Error reading PDF: {e}")
+        return ""
 
+# Function to generate OpenAI response
+def chat_with_ai(user_question, chat_history, pdf_text):
+    combined_context = f"PDF Content:\n{pdf_text}"
+    messages = [{"role": "system", "content": "You are a helpful assistant. Use the provided content."}]
+    for entry in chat_history:
+        messages.append({"role": "user", "content": entry['user']})
+        messages.append({"role": "assistant", "content": entry['bot']})
+    messages.append({"role": "user", "content": f"{combined_context}\n\nQuestion: {user_question}"})
 
-# Validate email
-def validate_user_email(email):
-    """
-    Validate the user's email address.
-    """
     try:
-        validate_email(email)
-        return True
-    except EmailNotValidError as e:
-        print(str(e))
-        return False
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=256,
+            temperature=0.7,
+            stream=False
+        )
+        return response['choices'][0]['message']['content']
+    except Exception as e:
+        return f"Error generating response: {e}"
 
+# ----------------------
+# Streamlit UI and App Logic
+# ----------------------
 
-# Streamlit App
-st.title("RAG Chatbot with User Info Collection")
+# Session State Initialization
+if "page" not in st.session_state:
+    st.session_state['page'] = 'form'
+if "chat_history" not in st.session_state:
+    st.session_state['chat_history'] = []
 
-# Add Welcome Message
-st.markdown("""
-### Welcome to the RAG Chatbot!
-This bot is here to help you with your questions using a specialized knowledge base.  
-Fill in your details below to get started!
-""")
+# ----------------------
+# PAGE 1: User Info Form
+# ----------------------
+if st.session_state['page'] == 'form':
+    with st.form(key="user_form"):
+        name = st.text_input("Name")
+        email = st.text_input("Email")
+        contact_no = st.text_input("Contact No.")
+        area_of_interest = st.text_input("Area of Interest")
+        
+        # Create two columns for buttons
+        col1, col2 = st.columns(2)
+        with col1:
+            submitted = st.form_submit_button("Proceed to Chat ")
+        with col2:
+            continue_chat = st.form_submit_button(" Skip and Join Chat")
+        
+        if submitted:
+            if name and email and contact_no and area_of_interest:
+                # You could also add a function to send an email if needed
+                st.session_state['page'] = 'chat'
+                st.rerun()
+            else:
+                st.warning("Please fill out all fields.")
+        
+        # If user clicks "Continue Chat with AIByTec"
+        if continue_chat:
+            st.session_state['page'] = 'chat'
+            st.rerun()
 
-# Collect user input
-user_name = st.text_input("Enter your name:")
-user_email = st.text_input("Enter your email:")
-user_question = st.text_input("Ask your question:")
+# ----------------------
+# PAGE 2: Chatbot Interface
+# ----------------------
+elif st.session_state['page'] == 'chat':
+    # Display chat history without headings
+    for entry in st.session_state['chat_history']:
+        # User Message
+        st.markdown(
+            f"""
+            <div style="
+                background-color: #439DF6; 
+                padding: 10px;
+                color: #fff;
+                border-radius: 10px; 
+                margin-bottom: 10px;
+                width: fit-content;
+                max-width: 80%;
+                overflow: hidden;
+            ">
+                {entry['user']}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
 
-if st.button("Submit"):
-    if validate_user_email(user_email):
-        # Call RAG response and send email
-        response = get_rag_response(user_question, "Knowledge base content here.")
-        st.write("Chatbot Response:", response)
-        send_email(user_email, user_name, f"Question: {user_question}\nResponse: {response}")
+        # Assistant Message
+        st.markdown(
+            f"""
+            <div style="
+                background-color:  #4a4a4a; 
+                padding: 10px; 
+                color: #fff;
+                border-radius: 10px; 
+                margin-bottom: 10px;
+                margin-left: auto;
+                width: fit-content;
+                max-width: 80%;
+                overflow: hidden;
+            ">
+                {entry['bot']}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+    # Use the predefined PDF content
+    if os.path.exists(predefined_pdf_path):
+        pdf_text = extract_pdf_text(predefined_pdf_path)
     else:
-        st.error("Invalid email address!")
+        pdf_text = "PDF content not loaded."
+
+    # Fixed input bar at bottom
+    user_input = st.chat_input("Type your question here...", key="user_input_fixed")
+
+    if user_input:
+        # Display bot's response
+        with st.spinner("Generating response..."):
+            bot_response = chat_with_ai(user_input, st.session_state['chat_history'], pdf_text)
+        
+        # Append user query and bot response to chat history
+        st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
+        
+        # Re-run to display updated chat history
+        st.rerun()
+    
+   
