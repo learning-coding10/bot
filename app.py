@@ -171,7 +171,7 @@ elif st.session_state['page'] == 'chat':
         st.markdown(
             f"""
             <div style="
-                background-color: #78bae4; 
+                background-color: #40a4e2; 
                 padding: 10px;
                 color: #fff;
                 border-radius: 10px; 
@@ -190,7 +190,7 @@ elif st.session_state['page'] == 'chat':
         st.markdown(
             f"""
             <div style="
-                background-color:  #D3D3D3; 
+                background-color:  #aaa8a8; 
                 padding: 10px; 
                 color: #fff;
                 border-radius: 10px; 
