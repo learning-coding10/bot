@@ -34,7 +34,7 @@ st.markdown(
     <style>
         /* Default text color for all views */
         body {
-            color: black !important;
+            color: white !important;
         }
 
         /* Specific styles for smaller screens (mobile) */
