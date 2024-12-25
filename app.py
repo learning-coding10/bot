@@ -223,7 +223,7 @@
         
 #         # Re-run to display updated chat history
 #         st.rerun()
- import openai
+import openai
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
