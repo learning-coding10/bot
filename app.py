@@ -590,14 +590,14 @@ if st.session_state['page'] == 'form':
 
         # Using st.columns for inline buttons
         st.markdown(
-           """
-           <style>
+            """
+            <style>
                .inline-button {
                    display: inline-block;
                    margin-right: 10px;
                }
-          </style>
-    """,
+           </style>
+            """,
             unsafe_allow_html=True
         )
 
