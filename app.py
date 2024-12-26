@@ -204,7 +204,6 @@
 #         st.rerun()
 
 
-
 import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
@@ -215,6 +214,7 @@ from bs4 import BeautifulSoup
 import openai
 import os
 from dotenv import load_dotenv
+import re  # For validation
 
 # ----------------------
 # Load Environment Variables
@@ -229,8 +229,18 @@ PDF_PATH = os.getenv("PDF_PATH")
 WEBSITE_URL = os.getenv("WEBSITE_URL")
 
 # ----------------------
-# Functions and Rest of the Script
+# Functions
 # ----------------------
+
+# Validate name, email, and contact number
+def is_valid_name(name):
+    return len(name.strip()) > 0
+
+def is_valid_email(email):
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+
+def is_valid_contact_no(contact_no):
+    return re.match(r"^\+?\d{10,15}$", contact_no)
 
 # Function to send email
 def send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode):
@@ -325,27 +335,30 @@ if st.session_state['page'] == 'form':
         contact_no = st.text_input("Contact No.")
         specific_needs_and_challenges = st.text_input("Task to be performed")
         training = st.text_input("Preferred course")
-        mode_of_training = st.radio("Mode of Training", options=["Online", "Onsite"])  # Radio button for Online/Onsite
-        preferred_time = st.text_input("Preferred Time")  # Separate field for preferred time
-        contact_mode = st.text_input("Contact Mode")  # Separate field for contact mode
+        mode_of_training = st.radio("Mode of Training", options=["Online", "Onsite"])
+        preferred_time = st.text_input("Preferred Time")
+        contact_mode = st.text_input("Contact Mode")
 
-        # Create two columns for buttons
-        col1, col2 = st.columns([1, 1])  # Equal width for both columns
-
+        col1, col2 = st.columns([1, 1])
         with col1:
             submitted = st.form_submit_button("Submit")
-        
         with col2:
             continue_chat = st.form_submit_button("Skip")
         
         if submitted:
-            if name and email and contact_no and specific_needs_and_challenges and training and mode_of_training and preferred_time and contact_mode:
+            if not is_valid_name(name):
+                st.warning("Please enter a valid name.")
+            elif not is_valid_email(email):
+                st.warning("Please enter a valid email address.")
+            elif not is_valid_contact_no(contact_no):
+                st.warning("Please enter a valid contact number (10-15 digits).")
+            elif not specific_needs_and_challenges or not training or not preferred_time or not contact_mode:
+                st.warning("Please fill out all fields.")
+            else:
                 prefered_time_contact_mode = f"{preferred_time}, {contact_mode}"
                 send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
                 st.session_state['page'] = 'chat'
                 st.rerun()
-            else:
-                st.warning("Please fill out all fields.")
         
         if continue_chat:
             st.session_state['page'] = 'chat'
@@ -355,61 +368,17 @@ if st.session_state['page'] == 'form':
 # PAGE 2: Chatbot Interface
 # ----------------------
 elif st.session_state['page'] == 'chat':
-    # Display chat history without headings
     for entry in st.session_state['chat_history']:
-        # User Message
-        st.markdown(
-            f"""
-            <div style="
-                background-color: #439DF6; 
-                color: #fff;
-                padding: 10px; 
-                border-radius: 10px; 
-                margin-bottom: 10px;
-                width: fit-content;
-                max-width: 80%;
-            ">
-                {entry['user']}
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div style='background-color: #439DF6; color: #fff; padding: 10px; border-radius: 10px; margin-bottom: 10px; width: fit-content; max-width: 80%;'>{entry['user']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background-color: #4a4a4a; color: #fff; padding: 10px; border-radius: 10px; margin-bottom: 10px; margin-left: auto; width: fit-content; max-width: 80%;'>{entry['bot']}</div>", unsafe_allow_html=True)
 
-        # Assistant Message
-        st.markdown(
-            f"""
-            <div style="
-                background-color:  #4a4a4a; 
-                color: #fff;
-                padding: 10px; 
-                border-radius: 10px; 
-                margin-bottom: 10px;
-                margin-left: auto;
-                width: fit-content;
-                max-width: 80%;
-            ">
-                {entry['bot']}
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-
-    # Load PDF and Website content once
     pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
     website_text = scrape_website(WEBSITE_URL)
 
-    # Fixed input bar at bottom
     user_input = st.chat_input("Type your question here...", key="user_input_fixed")
 
     if user_input:
-        # Display bot's response
         with st.spinner("Generating response..."):
             bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
-        
-        # Append user query and bot response to chat history
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
-        
-        # Re-run to display updated chat history
         st.rerun()
-
-
