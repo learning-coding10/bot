@@ -393,7 +393,7 @@ elif st.session_state['page'] == 'chat':
     if not st.session_state['chat_history']:
         st.session_state['chat_history'].append({
             "user": "", 
-            "bot": "Hello! I'm your AI chatbot. How can I assist you today?"
+            "bot": "Hello! I'm your AIByTec chatbot. How can I assist you today?"
         })
     
     # Display chat history
