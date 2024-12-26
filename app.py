@@ -169,9 +169,9 @@ elif st.session_state['page'] == 'chat':
             "bot": "Hello! I'm your AIByTec chatbot. How can I assist you today?"
         })
     
-    # Display chat history with swapped positions
+    # Display chat history
     for entry in st.session_state['chat_history']:
-        if entry['bot']:  # Show bot messages on the left
+        if entry['bot']:  # Show bot messages first
             st.markdown(
                 f"""
                 <div style="
@@ -180,7 +180,7 @@ elif st.session_state['page'] == 'chat':
                     color: #fff; 
                     border-radius: 10px; 
                     margin-bottom: 10px;
-                    margin-right: auto;
+                    margin-left: auto;
                     width: fit-content;
                     max-width: 80%;
                     overflow: hidden;
@@ -190,7 +190,7 @@ elif st.session_state['page'] == 'chat':
                 """, 
                 unsafe_allow_html=True
             )
-        if entry['user']:  # Show user messages on the right
+        if entry['user']:  # Show user messages after bot messages
             st.markdown(
                 f"""
                 <div style="
@@ -199,7 +199,6 @@ elif st.session_state['page'] == 'chat':
                     color: #fff;
                     border-radius: 10px; 
                     margin-bottom: 10px;
-                    margin-left: auto;
                     width: fit-content;
                     max-width: 80%;
                     overflow: hidden;
@@ -224,6 +223,7 @@ elif st.session_state['page'] == 'chat':
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
         # Re-run to display updated chat history
         st.rerun()
+
 
 
 # # ----------------------
