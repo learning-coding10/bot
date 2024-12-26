@@ -171,7 +171,25 @@ elif st.session_state['page'] == 'chat':
     
     # Display chat history
     for entry in st.session_state['chat_history']:
-        if entry['bot']:  # Show bot messages first
+        if entry['user']:  # Show user messages
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: #439DF6; 
+                    padding: 10px;
+                    color: #fff;
+                    border-radius: 10px; 
+                    margin-bottom: 10px;
+                    width: fit-content;
+                    max-width: 80%;
+                    overflow: hidden;
+                ">
+                    {entry['user']}
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        if entry['bot']:  # Show bot messages
             st.markdown(
                 f"""
                 <div style="
@@ -186,24 +204,6 @@ elif st.session_state['page'] == 'chat':
                     overflow: hidden;
                 ">
                     {entry['bot']}
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-        if entry['user']:  # Show user messages after bot messages
-            st.markdown(
-                f"""
-                <div style="
-                    background-color: #439DF6; 
-                    padding: 10px;
-                    color: #fff;
-                    border-radius: 10px; 
-                    margin-bottom: 10px;
-                    width: fit-content;
-                    max-width: 80%;
-                    overflow: hidden;
-                ">
-                    {entry['user']}
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -223,74 +223,6 @@ elif st.session_state['page'] == 'chat':
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
         # Re-run to display updated chat history
         st.rerun()
-
-
-
-# # ----------------------
-# # PAGE 2: Chatbot Interface
-# # ----------------------
-# elif st.session_state['page'] == 'chat':
-#     # Initialize chat history with a greeting from the bot
-#     if not st.session_state['chat_history']:
-#         st.session_state['chat_history'].append({
-#             "user": "", 
-#             "bot": "Hello! I'm your AIByTec chatbot. How can I assist you today?"
-#         })
-    
-#     # Display chat history
-#     for entry in st.session_state['chat_history']:
-#         if entry['user']:  # Show user messages
-#             st.markdown(
-#                 f"""
-#                 <div style="
-#                     background-color: #439DF6; 
-#                     padding: 10px;
-#                     color: #fff;
-#                     border-radius: 10px; 
-#                     margin-bottom: 10px;
-#                     width: fit-content;
-#                     max-width: 80%;
-#                     overflow: hidden;
-#                 ">
-#                     {entry['user']}
-#                 </div>
-#                 """, 
-#                 unsafe_allow_html=True
-#             )
-#         if entry['bot']:  # Show bot messages
-#             st.markdown(
-#                 f"""
-#                 <div style="
-#                     background-color: #4a4a4a; 
-#                     padding: 10px; 
-#                     color: #fff; 
-#                     border-radius: 10px; 
-#                     margin-bottom: 10px;
-#                     margin-left: auto;
-#                     width: fit-content;
-#                     max-width: 80%;
-#                     overflow: hidden;
-#                 ">
-#                     {entry['bot']}
-#                 </div>
-#                 """, 
-#                 unsafe_allow_html=True
-#             )
-    
-#     # Load PDF and Website content once
-#     pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
-#     website_text = scrape_website(WEBSITE_URL)
-
-#     # Fixed input bar at bottom
-#     user_input = st.chat_input("Type your question here...", key="user_input_fixed")
-#     if user_input:
-#         # Display bot's response
-#         with st.spinner("Generating response..."):
-#             bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
-#         # Append user query and bot response to chat history
-#         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
-#         # Re-run to display updated chat history
-#         st.rerun()
 
 
 
