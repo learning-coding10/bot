@@ -3,31 +3,55 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from PyPDF2 import PdfReader
+import requests
+from bs4 import BeautifulSoup
 import openai
 import os
-
-# ----------------------
-# Set Page Configuration (Must Be First Streamlit Command)
-# ----------------------
-st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
+from dotenv import load_dotenv
 
 # ----------------------
 # Load Environment Variables
 # ----------------------
-# Assuming you have environment variables set for sensitive data
-# SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-# SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
-# RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
-# openai.api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv()
 
-# Hard-code the PDF path
-predefined_pdf_path = "./Aibytec fine tuned data.pdf"  # Replace with your actual PDF file path
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
+RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+PDF_PATH = os.getenv("PDF_PATH")
+WEBSITE_URL = os.getenv("WEBSITE_URL")
 
 # ----------------------
-# Functions
+# Functions and Rest of the Script
 # ----------------------
 
-# Extract Text from Hard-Coded PDF
+# Function to send email
+def send_email(name, email, contact_no, area_of_interest):
+    subject = "New User Profile Submission"
+    body = f"""
+    New Student Profile Submitted:
+
+    Name: {name}
+    Email: {email}
+    Contact No.: {contact_no}
+    Area of Interest: {area_of_interest}
+    """
+    message = MIMEMultipart()
+    message['From'] = SENDER_EMAIL
+    message['To'] = RECEIVER_EMAIL
+    message['Subject'] = subject
+    message.attach(MIMEText(body, 'plain'))
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, message.as_string())
+        server.quit()
+        st.success("Email sent successfully!")
+    except Exception as e:
+        st.error(f"Error sending email: {e}")
+
+# Function to extract PDF text
 def extract_pdf_text(file_path):
     try:
         reader = PdfReader(file_path)
@@ -39,27 +63,28 @@ def extract_pdf_text(file_path):
         st.error(f"Error reading PDF: {e}")
         return ""
 
+# Function to scrape website content
+def scrape_website(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        return soup.get_text()
+    except Exception as e:
+        return f"Error scraping website: {e}"
+
 # Function to generate OpenAI response
-def chat_with_ai(user_question, chat_history, pdf_text):
-    # Initial greeting message
-    initial_greeting = "Hello! How can I assist you today?"
-    messages = [{"role": "system", "content": "You are a helpful assistant. please greet the user first and then Use the provided content."}]
-    
-    # Add greeting message if chat history is empty
-    if len(chat_history) == 0:
-        messages.append({"role": "assistant", "content": initial_greeting})
-    
+def chat_with_ai(user_question, website_text, pdf_text, chat_history):
+    combined_context = f"Website Content:\n{website_text}\n\nPDF Content:\n{pdf_text}"
+    messages = [{"role": "system", "content": "You are a helpful assistant. Use the provided content."}]
     for entry in chat_history:
         messages.append({"role": "user", "content": entry['user']})
         messages.append({"role": "assistant", "content": entry['bot']})
-    messages.append({"role": "user", "content": f"{pdf_text}\n\nQuestion: {user_question}"})
+    messages.append({"role": "user", "content": f"{combined_context}\n\nQuestion: {user_question}"})
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=256,
-            temperature=0.7,
             stream=False
         )
         return response['choices'][0]['message']['content']
@@ -69,6 +94,8 @@ def chat_with_ai(user_question, chat_history, pdf_text):
 # ----------------------
 # Streamlit UI and App Logic
 # ----------------------
+
+st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
 
 # Session State Initialization
 if "page" not in st.session_state:
@@ -80,22 +107,27 @@ if "chat_history" not in st.session_state:
 # PAGE 1: User Info Form
 # ----------------------
 if st.session_state['page'] == 'form':
+    # st.markdown('<p style="font-size: 21px;"><b>Hi! Welcome to AIByTec</b></p>', unsafe_allow_html=True)
+    
     with st.form(key="user_form"):
         name = st.text_input("Name")
         email = st.text_input("Email")
         contact_no = st.text_input("Contact No.")
         area_of_interest = st.text_input("Area of Interest")
-        
+
         # Create two columns for buttons
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 1])    # equal width for both columns
+
         with col1:
-            submitted = st.form_submit_button("Proceed to Chat ")
+            submitted = st.form_submit_button("Submit")
+        
         with col2:
-            continue_chat = st.form_submit_button(" Skip and Join Chat")
+            # continue_chat = st.form_submit_button("Continue Chat with AIByTec")
+            continue_chat = st.form_submit_button("Skip")
         
         if submitted:
             if name and email and contact_no and area_of_interest:
-                # You could also add a function to send an email if needed
+                send_email(name, email, contact_no, area_of_interest)
                 st.session_state['page'] = 'chat'
                 st.rerun()
             else:
@@ -116,14 +148,12 @@ elif st.session_state['page'] == 'chat':
         st.markdown(
             f"""
             <div style="
-                background-color: #439DF6; 
-                padding: 10px;
-                color: #fff;
+                background-color: #78bae4; 
+                padding: 10px; 
                 border-radius: 10px; 
                 margin-bottom: 10px;
                 width: fit-content;
                 max-width: 80%;
-                overflow: hidden;
             ">
                 {entry['user']}
             </div>
@@ -135,15 +165,13 @@ elif st.session_state['page'] == 'chat':
         st.markdown(
             f"""
             <div style="
-                background-color:  #4a4a4a; 
+                background-color:  #D3D3D3; 
                 padding: 10px; 
-                color: #fff;
                 border-radius: 10px; 
                 margin-bottom: 10px;
                 margin-left: auto;
                 width: fit-content;
                 max-width: 80%;
-                overflow: hidden;
             ">
                 {entry['bot']}
             </div>
@@ -151,11 +179,9 @@ elif st.session_state['page'] == 'chat':
             unsafe_allow_html=True
         )
 
-    # Use the predefined PDF content
-    if os.path.exists(predefined_pdf_path):
-        pdf_text = extract_pdf_text(predefined_pdf_path)
-    else:
-        pdf_text = "PDF content not loaded."
+    # Load PDF and Website content once
+    pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
+    website_text = scrape_website(WEBSITE_URL)
 
     # Fixed input bar at bottom
     user_input = st.chat_input("Type your question here...", key="user_input_fixed")
@@ -163,10 +189,10 @@ elif st.session_state['page'] == 'chat':
     if user_input:
         # Display bot's response
         with st.spinner("Generating response..."):
-            bot_response = chat_with_ai(user_input, st.session_state['chat_history'], pdf_text)
+            bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
         
         # Append user query and bot response to chat history
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
         
-        # Re-run to display updated chat history
+        Re-run to display updated chat history
         st.rerun()
