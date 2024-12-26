@@ -589,6 +589,19 @@ if st.session_state['page'] == 'form':
         contact_mode = st.text_input("Contact Mode")
 
         # Using st.columns for inline buttons
+        st.markdown(
+           """
+           <style>
+               .inline-button {
+                   display: inline-block;
+                   margin-right: 10px;
+               }
+          </style>
+    """,
+            unsafe_allow_html=True
+        )
+
+        
         col1, col2 = st.columns([1, 1])  # Two columns with equal width
         with col1:
             submitted = st.form_submit_button("Submit")
