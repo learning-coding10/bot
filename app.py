@@ -107,7 +107,8 @@ if "chat_history" not in st.session_state:
 # PAGE 1: User Info Form
 # ----------------------
 if st.session_state['page'] == 'form':
-    st.markdown('<p style="font-size: 21px;"><b>First make Your Profile</b></p>', unsafe_allow_html=True)
+    # st.markdown('<p style="font-size: 21px;"><b>First make Your Profile</b></p>', unsafe_allow_html=True)
+    st.subheader("Complete Your Profile")
     
     with st.form(key="user_form"):
         name = st.text_input("Name")
@@ -149,6 +150,7 @@ elif st.session_state['page'] == 'chat':
             f"""
             <div style="
                 background-color: #439DF6; 
+                color: #fff;
                 padding: 10px; 
                 border-radius: 10px; 
                 margin-bottom: 10px;
@@ -166,6 +168,7 @@ elif st.session_state['page'] == 'chat':
             f"""
             <div style="
                 background-color:  #4a4a4a; 
+                color: #fff;
                 padding: 10px; 
                 border-radius: 10px; 
                 margin-bottom: 10px;
