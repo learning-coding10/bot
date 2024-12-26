@@ -26,7 +26,7 @@ WEBSITE_URL = os.getenv("WEBSITE_URL")
 # ----------------------
 
 # Function to send email
-def send_email(name, email, contact_no, area_of_interest):
+def send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode):
     subject = "New User Profile Submission"
     body = f"""
     New Student Profile Submitted:
@@ -34,7 +34,10 @@ def send_email(name, email, contact_no, area_of_interest):
     Name: {name}
     Email: {email}
     Contact No.: {contact_no}
-    Area of Interest: {area_of_interest}
+    Task to be Performed: {specific_needs_and_challenges}
+    Preferred Course: {training}
+    Online/Onsite: {mode_of_training}
+    Preferred Time/Mode of Contact: {prefered_time_contact_mode}
     """
     message = MIMEMultipart()
     message['From'] = SENDER_EMAIL
@@ -107,34 +110,34 @@ if "chat_history" not in st.session_state:
 # PAGE 1: User Info Form
 # ----------------------
 if st.session_state['page'] == 'form':
-    # st.markdown('<p style="font-size: 21px;"><b>First make Your Profile</b></p>', unsafe_allow_html=True)
     st.subheader("Complete Your Profile")
     
     with st.form(key="user_form"):
         name = st.text_input("Name")
         email = st.text_input("Email")
         contact_no = st.text_input("Contact No.")
-        area_of_interest = st.text_input("Area of Interest")
+        specific_needs_and_challenges = st.text_input("Task to be performed")
+        training = st.text_input("Preferred course")
+        mode_of_training = st.text_input("Online/Onsite")
+        prefered_time_contact_mode = st.text_input("Preferred time/mode of contact")
 
         # Create two columns for buttons
-        col1, col2 = st.columns([1, 1])    # equal width for both columns
+        col1, col2 = st.columns([1, 1])  # equal width for both columns
 
         with col1:
             submitted = st.form_submit_button("Submit")
         
         with col2:
-            # continue_chat = st.form_submit_button("Continue Chat with AIByTec")
             continue_chat = st.form_submit_button("Skip")
         
         if submitted:
-            if name and email and contact_no and area_of_interest:
-                send_email(name, email, contact_no, area_of_interest)
+            if name and email and contact_no and specific_needs_and_challenges and training and mode_of_training and prefered_time_contact_mode:
+                send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
                 st.session_state['page'] = 'chat'
                 st.rerun()
             else:
                 st.warning("Please fill out all fields.")
         
-        # If user clicks "Continue Chat with AIByTec"
         if continue_chat:
             st.session_state['page'] = 'chat'
             st.rerun()
