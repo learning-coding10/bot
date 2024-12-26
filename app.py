@@ -453,7 +453,6 @@
 
 
 
-
 import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
@@ -589,32 +588,14 @@ if st.session_state['page'] == 'form':
         preferred_time = st.text_input("Preferred Time")
         contact_mode = st.text_input("Contact Mode")
 
-        col1, col2 = st.columns([1, 1])
+        # Using st.columns for inline buttons
+        col1, col2 = st.columns([1, 1])  # Two columns with equal width
         with col1:
-            submit_button = st.form_submit_button("Submit")
+            submitted = st.form_submit_button("Submit")
         with col2:
-            skip_button = st.form_submit_button("Skip")
+            continue_chat = st.form_submit_button("Skip")
         
-        # Custom button styling
-        st.markdown("""
-            <style>
-                .submit-btn, .skip-btn {
-                    background-color: #439DF6;
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 5px;
-                    border: none;
-                    cursor: pointer;
-                    font-size: 16px;
-                }
-                .submit-btn:hover, .skip-btn:hover {
-                    background-color: #3578e5;
-                }
-            </style>
-            """, unsafe_allow_html=True)
-
-        # Apply custom button class
-        if submit_button:
+        if submitted:
             if not is_valid_name(name):
                 st.warning("Please enter a valid name.")
             elif not is_valid_email(email):
@@ -629,7 +610,7 @@ if st.session_state['page'] == 'form':
                 st.session_state['page'] = 'chat'
                 st.rerun()
         
-        if skip_button:
+        if continue_chat:
             st.session_state['page'] = 'chat'
             st.rerun()
 
@@ -698,5 +679,6 @@ elif st.session_state['page'] == 'chat':
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
         # Re-run to display updated chat history
         st.rerun()
+
 
 
