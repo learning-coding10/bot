@@ -379,7 +379,7 @@ if st.session_state['page'] == 'form':
 
         col1, col2 = st.columns([1, 1])
         with col1:
-            submitted = st.form_submit_button("Chat After Submitting Profile")
+            submitted = st.form_submit_button("Complete Profile to Chat!")
         with col2:
             continue_chat = st.form_submit_button("Chat with AIByTec Bot")
         
