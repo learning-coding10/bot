@@ -26,7 +26,6 @@ WEBSITE_URL = os.getenv("WEBSITE_URL")
 # Functions
 # ----------------------
 
-# Validate name, email, and contact number
 def is_valid_name(name):
     return len(name.strip()) > 0
 
@@ -36,7 +35,6 @@ def is_valid_email(email):
 def is_valid_contact_no(contact_no):
     return re.match(r"^\+?\d{10,15}$", contact_no)
 
-# Function to send email
 def send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode):
     subject = "New User Profile Submission"
     body = f"""
@@ -65,7 +63,6 @@ def send_email(name, email, contact_no, specific_needs_and_challenges, training,
     except Exception as e:
         st.error(f"Error sending email: {e}")
 
-# Function to extract PDF text
 def extract_pdf_text(file_path):
     try:
         reader = PdfReader(file_path)
@@ -77,7 +74,6 @@ def extract_pdf_text(file_path):
         st.error(f"Error reading PDF: {e}")
         return ""
 
-# Function to scrape website content
 def scrape_website(url):
     try:
         response = requests.get(url)
@@ -86,7 +82,6 @@ def scrape_website(url):
     except Exception as e:
         return f"Error scraping website: {e}"
 
-# Function to summarize content
 def summarize_text(text):
     try:
         response = openai.ChatCompletion.create(
@@ -100,7 +95,6 @@ def summarize_text(text):
     except Exception as e:
         return f"Error summarizing text: {e}"
 
-# Function to generate OpenAI response
 def chat_with_ai(user_question, website_text, pdf_text, chat_history):
     summarized_pdf_text = summarize_text(pdf_text)
     summarized_website_text = summarize_text(website_text)
@@ -137,18 +131,13 @@ def chat_with_ai(user_question, website_text, pdf_text, chat_history):
 
 st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
 
-# Session State Initialization
-if "profile" not in st.session_state:
-    st.session_state['profile'] = None
+if "profile_created" not in st.session_state:
+    st.session_state['profile_created'] = False
 if "chat_history" not in st.session_state:
     st.session_state['chat_history'] = []
 
-# ----------------------
-# User Profile Form
-# ----------------------
-if st.session_state['profile'] is None:
+if not st.session_state['profile_created']:
     st.subheader("Complete Your Profile")
-
     with st.form(key="user_form"):
         name = st.text_input("Name")
         email = st.text_input("Email")
@@ -158,7 +147,11 @@ if st.session_state['profile'] is None:
         mode_of_training = st.text_input("Online/Onsite")
         prefered_time_contact_mode = st.text_input("Preferred time/mode of contact")
 
-        submitted = st.form_submit_button("Submit Profile")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            submitted = st.form_submit_button("Complete Profile to Chat!")
+        with col2:
+            skip = st.form_submit_button("Skip to Chat")
 
         if submitted:
             if not is_valid_name(name):
@@ -170,86 +163,50 @@ if st.session_state['profile'] is None:
             elif not specific_needs_and_challenges or not training or not mode_of_training or not prefered_time_contact_mode:
                 st.warning("Please fill out all fields.")
             else:
-                # Save the profile in session state
-                st.session_state['profile'] = {
-                    "name": name,
-                    "email": email,
-                    "contact_no": contact_no,
-                    "specific_needs_and_challenges": specific_needs_and_challenges,
-                    "training": training,
-                    "mode_of_training": mode_of_training,
-                    "prefered_time_contact_mode": prefered_time_contact_mode,
-                }
-                send_email(
-                    name, email, contact_no, 
-                    specific_needs_and_challenges, training, 
-                    mode_of_training, prefered_time_contact_mode
-                )
-                st.success("Profile submitted successfully! You can now chat with the AI.")
+                send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
+                st.session_state['profile_created'] = True
+                st.success("Profile created successfully! Proceed to chat.")
                 st.experimental_rerun()
-
-# ----------------------
-# Chatbot Interface
-# ----------------------
+        elif skip:
+            st.session_state['profile_created'] = True
+            st.experimental_rerun()
 else:
-    st.subheader(f"Welcome back, {st.session_state['profile']['name']}!")
-
-    # Initialize chat history with a greeting from the bot
+    st.subheader("Chat with AIByTec Bot")
     if not st.session_state['chat_history']:
         st.session_state['chat_history'].append({
             "user": "", 
             "bot": "Hello! I'm your AIByTec chatbot. How can I assist you today?"
         })
 
-    # Display chat history
-    for entry in st.session_state['chat_history']:
-        if entry['user']:  # Show user messages
-            st.markdown(
-                f"""
-                <div style='display: flex; justify-content: flex-end; margin-bottom: 10px;'>
-                    <div style='display: flex; align-items: center; gap: 10px;'>
-                        <div style='color: #439DF6;'>👤</div>
-                        <div style='max-width: 70%; 
-                                    background-color: #439DF6; color: #fff; 
-                                    padding: 10px; border-radius: 10px;'>
-                            {entry['user']}
-                        </div>
-                    </div>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-        if entry['bot']:  # Show bot messages
-            st.markdown(
-                f"""
-                <div style='display: flex; justify-content: flex-start; margin-bottom: 10px;'>
-                    <div style='display: flex; align-items: center; gap: 10px;'>
-                        <div style='color: #4a4a4a;'>🤖</div>
-                        <div style='max-width: 70%; 
-                                    background-color: #4a4a4a; color: #fff; 
-                                    padding: 10px; border-radius: 10px;'>
-                            {entry['bot']}
-                        </div>
-                    </div>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-
-    # Load PDF and Website content once
     pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
     website_text = scrape_website(WEBSITE_URL)
 
-    # Fixed input bar at bottom
-    user_input = st.chat_input("Type your question here...", key="user_input_fixed")
+    for entry in st.session_state['chat_history']:
+        if entry['user']:
+            st.markdown(
+                f"""
+                <div style='display: flex; justify-content: flex-end; margin-bottom: 10px;'>
+                    <div style='background-color: #439DF6; color: white; padding: 10px; border-radius: 10px;'>
+                        👤 {entry['user']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        if entry['bot']:
+            st.markdown(
+                f"""
+                <div style='display: flex; justify-content: flex-start; margin-bottom: 10px;'>
+                    <div style='background-color: #4a4a4a; color: white; padding: 10px; border-radius: 10px;'>
+                        🤖 {entry['bot']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    user_input = st.chat_input("Type your question here...")
     if user_input:
-        # Display bot's response
         with st.spinner("Generating response..."):
             bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
-        # Append user query and bot response to chat history
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
-        # Re-run to display updated chat history
-        st.rerun()
+        st.experimental_rerun()
 
 
 
