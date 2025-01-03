@@ -23,9 +23,16 @@ PDF_PATH = os.getenv("PDF_PATH")
 WEBSITE_URL = os.getenv("WEBSITE_URL")
 
 # ----------------------
+# Session State Initialization
+# ----------------------
+if "profile_created" not in st.session_state:
+    st.session_state['profile_created'] = False
+if "chat_history" not in st.session_state:
+    st.session_state['chat_history'] = []
+
+# ----------------------
 # Functions
 # ----------------------
-
 def is_valid_name(name):
     return len(name.strip()) > 0
 
@@ -63,78 +70,10 @@ def send_email(name, email, contact_no, specific_needs_and_challenges, training,
     except Exception as e:
         st.error(f"Error sending email: {e}")
 
-def extract_pdf_text(file_path):
-    try:
-        reader = PdfReader(file_path)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n"
-        return text
-    except Exception as e:
-        st.error(f"Error reading PDF: {e}")
-        return ""
-
-def scrape_website(url):
-    try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        return soup.get_text()
-    except Exception as e:
-        return f"Error scraping website: {e}"
-
-def summarize_text(text):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Summarize the following text for clarity and conciseness."},
-                {"role": "user", "content": text}
-            ],
-        )
-        return response['choices'][0]['message']['content']
-    except Exception as e:
-        return f"Error summarizing text: {e}"
-
-def chat_with_ai(user_question, website_text, pdf_text, chat_history):
-    summarized_pdf_text = summarize_text(pdf_text)
-    summarized_website_text = summarize_text(website_text)
-
-    combined_context = f"""
-    You are an assistant with access to two sources of information:
-    1. Website Content: {summarized_website_text}
-    2. PDF Content: {summarized_pdf_text}
-
-    Use these sources to answer the user's question accurately and concisely.
-    """
-    messages = [
-        {"role": "system", "content": "As an Aibytec chatbot, you are responsible for guiding the user through Aibytec’s services. Your tone should be conversational yet professional, offering easy-to-understand explanations."}
-    ]
-
-    for entry in chat_history[-5:]:
-        messages.append({"role": "user", "content": entry['user']})
-        messages.append({"role": "assistant", "content": entry['bot']})
-
-    messages.append({"role": "user", "content": f"{combined_context}\n\nQuestion: {user_question}"})
-
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=messages
-        )
-        return response['choices'][0]['message']['content']
-    except Exception as e:
-        return f"Error generating response: {e}"
-
 # ----------------------
-# Streamlit UI and App Logic
+# App Logic
 # ----------------------
-
 st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
-
-if "profile_created" not in st.session_state:
-    st.session_state['profile_created'] = False
-if "chat_history" not in st.session_state:
-    st.session_state['chat_history'] = []
 
 if not st.session_state['profile_created']:
     st.subheader("Complete Your Profile")
@@ -165,11 +104,10 @@ if not st.session_state['profile_created']:
             else:
                 send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
                 st.session_state['profile_created'] = True
-                st.success("Profile created successfully! Proceed to chat.")
-                st.experimental_rerun()
+                st.experimental_rerun()  # Safe to rerun after updating session state
         elif skip:
             st.session_state['profile_created'] = True
-            st.experimental_rerun()
+            st.experimental_rerun()  # Safe to rerun after updating session state
 else:
     st.subheader("Chat with AIByTec Bot")
     if not st.session_state['chat_history']:
@@ -177,36 +115,18 @@ else:
             "user": "", 
             "bot": "Hello! I'm your AIByTec chatbot. How can I assist you today?"
         })
-
-    pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
-    website_text = scrape_website(WEBSITE_URL)
-
+    
     for entry in st.session_state['chat_history']:
         if entry['user']:
-            st.markdown(
-                f"""
-                <div style='display: flex; justify-content: flex-end; margin-bottom: 10px;'>
-                    <div style='background-color: #439DF6; color: white; padding: 10px; border-radius: 10px;'>
-                        👤 {entry['user']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            st.write(f"👤 {entry['user']}")
         if entry['bot']:
-            st.markdown(
-                f"""
-                <div style='display: flex; justify-content: flex-start; margin-bottom: 10px;'>
-                    <div style='background-color: #4a4a4a; color: white; padding: 10px; border-radius: 10px;'>
-                        🤖 {entry['bot']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            st.write(f"🤖 {entry['bot']}")
 
-    user_input = st.chat_input("Type your question here...")
+    user_input = st.text_input("Type your question here...")
     if user_input:
-        with st.spinner("Generating response..."):
-            bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
-        st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
+        st.session_state['chat_history'].append({"user": user_input, "bot": "Let me find an answer for you!"})
         st.experimental_rerun()
+
 
 
 
