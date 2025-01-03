@@ -454,8 +454,8 @@ elif st.session_state['page'] == 'chat':
                     width: fit-content;
                     max-width: 70%;
                     # overflow: hidden;
-                    display: flex;
-                    align-items: end;
+                    # display: flex;
+                    # align-items: end;
                 ">
 
                     {entry['bot']}
