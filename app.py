@@ -417,6 +417,7 @@ elif st.session_state['page'] == 'chat':
         if entry['user']:  # Show user messages
             st.markdown(
                 f"""
+                </div>
                 <div style='display: flex; justify-content: right; margin-bottom: 10px;'>
                 <div style="
                     background-color: #439DF6; 
@@ -441,6 +442,7 @@ elif st.session_state['page'] == 'chat':
         if entry['bot']:  # Show bot messages
             st.markdown(
                 f"""
+                </div>
                 <div style='display: flex; justify-content: right; margin-bottom: 10px;'>
                 <div style="
                     background-color: #4a4a4a; 
