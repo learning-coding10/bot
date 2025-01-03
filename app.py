@@ -9,7 +9,6 @@ import openai
 import os
 from dotenv import load_dotenv
 import re  # For validation
-import json  # For storing user data
 
 # ----------------------
 # Load Environment Variables
@@ -22,23 +21,10 @@ RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 PDF_PATH = os.getenv("PDF_PATH")
 WEBSITE_URL = os.getenv("WEBSITE_URL")
-USER_DATA_FILE = "user_data.json"
 
 # ----------------------
 # Functions
 # ----------------------
-
-# Load user data
-def load_user_data():
-    if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-# Save user data
-def save_user_data(data):
-    with open(USER_DATA_FILE, "w") as f:
-        json.dump(data, f)
 
 # Validate name, email, and contact number
 def is_valid_name(name):
@@ -151,23 +137,18 @@ def chat_with_ai(user_question, website_text, pdf_text, chat_history):
 
 st.set_page_config(page_title="Student Profile & AI Chatbot", layout="wide")
 
-# Load user data
-user_data = load_user_data()
-
+# Session State Initialization
+if "profile" not in st.session_state:
+    st.session_state['profile'] = None
 if "chat_history" not in st.session_state:
     st.session_state['chat_history'] = []
 
-# Check if user data exists
-if "profile_completed" not in st.session_state:
-    if user_data:
-        st.session_state['profile_completed'] = True
-    else:
-        st.session_state['profile_completed'] = False
-
-# User profile form
-if not st.session_state['profile_completed']:
+# ----------------------
+# User Profile Form
+# ----------------------
+if st.session_state['profile'] is None:
     st.subheader("Complete Your Profile")
-    
+
     with st.form(key="user_form"):
         name = st.text_input("Name")
         email = st.text_input("Email")
@@ -177,7 +158,9 @@ if not st.session_state['profile_completed']:
         mode_of_training = st.text_input("Online/Onsite")
         prefered_time_contact_mode = st.text_input("Preferred time/mode of contact")
 
-        if st.form_submit_button("Submit"):
+        submitted = st.form_submit_button("Submit Profile")
+
+        if submitted:
             if not is_valid_name(name):
                 st.warning("Please enter a valid name.")
             elif not is_valid_email(email):
@@ -187,8 +170,8 @@ if not st.session_state['profile_completed']:
             elif not specific_needs_and_challenges or not training or not mode_of_training or not prefered_time_contact_mode:
                 st.warning("Please fill out all fields.")
             else:
-                # Save user data
-                user_data.update({
+                # Save the profile in session state
+                st.session_state['profile'] = {
                     "name": name,
                     "email": email,
                     "contact_no": contact_no,
@@ -196,33 +179,78 @@ if not st.session_state['profile_completed']:
                     "training": training,
                     "mode_of_training": mode_of_training,
                     "prefered_time_contact_mode": prefered_time_contact_mode,
-                })
-                save_user_data(user_data)
-                send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
-                st.session_state['profile_completed'] = True
-                st.success("Profile saved! You can now chat with the bot.")
+                }
+                send_email(
+                    name, email, contact_no, 
+                    specific_needs_and_challenges, training, 
+                    mode_of_training, prefered_time_contact_mode
+                )
+                st.success("Profile submitted successfully! You can now chat with the AI.")
                 st.experimental_rerun()
 
-# Chatbot interface
-if st.session_state['profile_completed']:
-    st.header(f"Welcome back, {user_data.get('name', 'User')}!")
+# ----------------------
+# Chatbot Interface
+# ----------------------
+else:
+    st.subheader(f"Welcome back, {st.session_state['profile']['name']}!")
+
+    # Initialize chat history with a greeting from the bot
+    if not st.session_state['chat_history']:
+        st.session_state['chat_history'].append({
+            "user": "", 
+            "bot": "Hello! I'm your AIByTec chatbot. How can I assist you today?"
+        })
+
+    # Display chat history
+    for entry in st.session_state['chat_history']:
+        if entry['user']:  # Show user messages
+            st.markdown(
+                f"""
+                <div style='display: flex; justify-content: flex-end; margin-bottom: 10px;'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <div style='color: #439DF6;'>👤</div>
+                        <div style='max-width: 70%; 
+                                    background-color: #439DF6; color: #fff; 
+                                    padding: 10px; border-radius: 10px;'>
+                            {entry['user']}
+                        </div>
+                    </div>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        if entry['bot']:  # Show bot messages
+            st.markdown(
+                f"""
+                <div style='display: flex; justify-content: flex-start; margin-bottom: 10px;'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <div style='color: #4a4a4a;'>🤖</div>
+                        <div style='max-width: 70%; 
+                                    background-color: #4a4a4a; color: #fff; 
+                                    padding: 10px; border-radius: 10px;'>
+                            {entry['bot']}
+                        </div>
+                    </div>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+
+    # Load PDF and Website content once
     pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
     website_text = scrape_website(WEBSITE_URL)
 
-    if not st.session_state['chat_history']:
-        st.session_state['chat_history'].append({"user": "", "bot": "Hello! I'm AIByTec Bot. How can I assist you today?"})
-
-    for entry in st.session_state['chat_history']:
-        if entry['user']:
-            st.markdown(f"👤: {entry['user']}")
-        if entry['bot']:
-            st.markdown(f"🤖: {entry['bot']}")
-
-    user_input = st.chat_input("Type your question here...")
+    # Fixed input bar at bottom
+    user_input = st.chat_input("Type your question here...", key="user_input_fixed")
     if user_input:
-        bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
+        # Display bot's response
+        with st.spinner("Generating response..."):
+            bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
+        # Append user query and bot response to chat history
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
-        st.experimental_rerun()
+        # Re-run to display updated chat history
+        st.rerun()
+
 
 
 
