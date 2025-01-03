@@ -417,16 +417,24 @@ elif st.session_state['page'] == 'chat':
         if entry['user']:  # Show user messages
             st.markdown(
                 f"""
-                <div style="
-                    background-color: #439DF6; 
-                    padding: 10px;
-                    color: #fff;
-                    border-radius: 10px; 
-                    margin-bottom: 10px;
-                    width: fit-content;
-                    max-width: 80%;
-                    overflow: hidden;
-                ">
+                # <div style="
+                #     background-color: #439DF6; 
+                #     padding: 10px;
+                #     color: #fff;
+                #     border-radius: 10px; 
+                #     margin-bottom: 10px;
+                #     width: fit-content;
+                #     max-width: 80%;
+                #     overflow: hidden;
+                # ">
+                 <div style='
+                 display: flex; 
+                 align-items: center;
+                 max-width: 70%; 
+                 background-color: #78bae4; 
+                 color:rgb(255, 255, 255); 
+                 padding: 10px;
+                 border-radius: 10px;'>
                     {entry['user']}
                 </div>
                 """, 
@@ -435,17 +443,27 @@ elif st.session_state['page'] == 'chat':
         if entry['bot']:  # Show bot messages
             st.markdown(
                 f"""
-                <div style="
-                    background-color: #4a4a4a; 
-                    padding: 10px; 
-                    color: #fff; 
-                    border-radius: 10px; 
-                    margin-bottom: 10px;
-                    margin-left: auto;
-                    width: fit-content;
-                    max-width: 80%;
-                    overflow: hidden;
-                ">
+                # <div style="
+                #     background-color: #4a4a4a; 
+                #     padding: 10px; 
+                #     color: #fff; 
+                #     border-radius: 10px; 
+                #     margin-bottom: 10px;
+                #     margin-left: auto;
+                #     width: fit-content;
+                #     max-width: 80%;
+                #     overflow: hidden;
+                # ">
+
+                  <div style='
+                  display: flex;
+                  align-items: center;
+                  max-width: 70%; 
+                  background-color: #A9A9A9;
+                  color:rgb(255, 255, 255); 
+                  padding: 10px; 
+                  border-radius: 10px;
+                '>
                     {entry['bot']}
                 </div>
                 """, 
