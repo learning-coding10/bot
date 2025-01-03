@@ -424,8 +424,8 @@ elif st.session_state['page'] == 'chat':
                     padding: 10px;
                     color: #fff;
                     border-radius: 10px; 
-                    margin-bottom: 10px;
-                    width: fit-content;
+                    # margin-bottom: 10px;
+                    # width: fit-content;
                     max-width: 70%;
                     overflow: hidden;
                     display: flex; 
@@ -449,8 +449,8 @@ elif st.session_state['page'] == 'chat':
                     padding: 10px; 
                     color: #fff; 
                     border-radius: 10px; 
-                    margin-bottom: 10px;
-                    margin-left: auto;
+                    # margin-bottom: 10px;
+                    # margin-left: auto;
                     width: fit-content;
                     max-width: 70%;
                     overflow: hidden;
