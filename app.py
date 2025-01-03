@@ -419,21 +419,10 @@ elif st.session_state['page'] == 'chat':
                 f"""
                 </div>
                 <div style='display: flex; justify-content: right; margin-bottom: 10px;'>
-                <div style="
-                    background-color: #439DF6; 
-                    padding: 10px;
-                    color: #fff;
-                    border-radius: 10px; 
-                    # margin-bottom: 10px;
-                    # width: fit-content;
-                    max-width: 70%;
-                    overflow: hidden;
-                    # display: flex; 
-                    # align-items: center;
-                    border-radius: 10px;
-                ">
-        
-                    {entry['user']}
+                <div style='display: flex; align-items: center; max-width: 70%; 
+                            background-color: #78bae4; color:rgb(255, 255, 255); 
+                            padding: 10px; border-radius: 10px;'>
+                    <span>{entry['user']}</span>
                 </div>
                 </div>
                 """, 
@@ -444,21 +433,10 @@ elif st.session_state['page'] == 'chat':
                 f"""
                 </div>
                 <div style='display: flex; justify-content: left; margin-bottom: 10px;'>
-                <div style="
-                    background-color: #4a4a4a; 
-                    padding: 10px; 
-                    color: #fff; 
-                    border-radius: 10px; 
-                    # margin-bottom: 10px;
-                    # margin-left: auto;
-                    width: fit-content;
-                    max-width: 70%;
-                    # overflow: hidden;
-                    # display: flex;
-                    # align-items: end;
-                ">
-
-                    {entry['bot']}
+                <div style='display: flex; align-items: center; max-width: 70%; 
+                            background-color: #A9A9A9; color:rgb(255, 255, 255); 
+                            padding: 10px; border-radius: 10px;'>
+                    <span>{entry['bot']}</span>
                 </div>
                 </div>
                 """, 
