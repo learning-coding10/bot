@@ -427,14 +427,15 @@ elif st.session_state['page'] == 'chat':
                 #     max-width: 80%;
                 #     overflow: hidden;
                 # ">
-                 <div style='
+             <div style='
                  display: flex; 
                  align-items: center;
                  max-width: 70%; 
-                 background-color: #78bae4; 
+                 background-color: #439DF6; 
                  color:rgb(255, 255, 255); 
                  padding: 10px;
-                 border-radius: 10px;'>
+                 border-radius: 10px;
+             '>
                     {entry['user']}
                 </div>
                 """, 
@@ -455,15 +456,15 @@ elif st.session_state['page'] == 'chat':
                 #     overflow: hidden;
                 # ">
 
-                  <div style='
+              <div style='
                   display: flex;
                   align-items: center;
                   max-width: 70%; 
-                  background-color: #A9A9A9;
+                  background-color: #4a4a4a;
                   color:rgb(255, 255, 255); 
                   padding: 10px; 
                   border-radius: 10px;
-                '>
+              '>
                     {entry['bot']}
                 </div>
                 """, 
