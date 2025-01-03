@@ -434,6 +434,7 @@ elif st.session_state['page'] == 'chat':
         
                     {entry['user']}
                 </div>
+                </div>
                 """, 
                 unsafe_allow_html=True
             )
@@ -456,6 +457,7 @@ elif st.session_state['page'] == 'chat':
                 ">
 
                     {entry['bot']}
+                </div>
                 </div>
                 """, 
                 unsafe_allow_html=True
