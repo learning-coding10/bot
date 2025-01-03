@@ -428,8 +428,8 @@ elif st.session_state['page'] == 'chat':
                     # width: fit-content;
                     max-width: 70%;
                     overflow: hidden;
-                    display: flex; 
-                    align-items: center;
+                    # display: flex; 
+                    # align-items: center;
                     border-radius: 10px;
                 ">
         
