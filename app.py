@@ -1,45 +1,71 @@
-import openai
-import numpy as np
-import os
-from dotenv import load_dotenv
-import re
-import requests
-from PyPDF2 import PdfReader
-from sklearn.metrics.pairwise import cosine_similarity
+import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import streamlit as st
+from PyPDF2 import PdfReader
+import requests
 from bs4 import BeautifulSoup
+import openai
+import os
+from dotenv import load_dotenv
+import re  # For validation
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 # ----------------------
 # Load Environment Variables
 # ----------------------
 load_dotenv()
 
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
+RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 PDF_PATH = os.getenv("PDF_PATH")
 WEBSITE_URL = os.getenv("WEBSITE_URL")
-SMTP_SERVER = os.getenv("SMTP_SERVER")
-SMTP_PORT = os.getenv("SMTP_PORT")
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
-RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 
 # ----------------------
 # Functions
 # ----------------------
 
-# Function to get embeddings from OpenAI
-def get_embeddings(text):
+# Validate name, email, and contact number
+def is_valid_name(name):
+    return len(name.strip()) > 0
+
+def is_valid_email(email):
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+
+def is_valid_contact_no(contact_no):
+    return re.match(r"^\+?\d{10,15}$", contact_no)
+
+# Function to send email
+def send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode):
+    subject = "New User Profile Submission"
+    body = f"""
+    New Student Profile Submitted:
+
+    Name: {name}
+    Email: {email}
+    Contact No.: {contact_no}
+    Task to be Performed: {specific_needs_and_challenges}
+    Preferred Course: {training}
+    Mode of Training: {mode_of_training}
+    Preferred Time/Mode of Contact: {prefered_time_contact_mode}
+    """
+    message = MIMEMultipart()
+    message['From'] = SENDER_EMAIL
+    message['To'] = RECEIVER_EMAIL
+    message['Subject'] = subject
+    message.attach(MIMEText(body, 'plain'))
     try:
-        response = openai.Embedding.create(
-            model="text-embedding-ada-002",  # Using OpenAI embedding model
-            input=text
-        )
-        return np.array([embedding['embedding'] for embedding in response['data']])
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, message.as_string())
+        server.quit()
+        st.success("Email sent successfully!")
     except Exception as e:
-        return f"Error getting embeddings: {e}"
+        st.error(f"Error sending email: {e}")
 
 # Function to extract PDF text
 def extract_pdf_text(file_path):
@@ -50,7 +76,8 @@ def extract_pdf_text(file_path):
             text += page.extract_text() + "\n"
         return text
     except Exception as e:
-        return f"Error reading PDF: {e}"
+        st.error(f"Error reading PDF: {e}")
+        return ""
 
 # Function to scrape website content
 def scrape_website(url):
@@ -60,6 +87,21 @@ def scrape_website(url):
         return soup.get_text()
     except Exception as e:
         return f"Error scraping website: {e}"
+
+# Function to generate embeddings
+def generate_embeddings(text):
+    try:
+        response = openai.Embedding.create(
+            model="text-embedding-ada-002",  # OpenAI's embedding model
+            input=text
+        )
+        return response['data'][0]['embedding']
+    except Exception as e:
+        return f"Error generating embeddings: {e}"
+
+# Function to calculate cosine similarity
+def calculate_cosine_similarity(query_embedding, document_embeddings):
+    return cosine_similarity([query_embedding], document_embeddings)
 
 # Function to summarize content
 def summarize_text(text):
@@ -75,36 +117,46 @@ def summarize_text(text):
     except Exception as e:
         return f"Error summarizing text: {e}"
 
-# Function to retrieve the most relevant content based on cosine similarity
-def retrieve_relevant_content(user_question, content_embeddings, documents):
-    question_embedding = get_embeddings(user_question)
-    similarities = cosine_similarity(question_embedding, content_embeddings)
-    best_match_index = np.argmax(similarities)
-    return documents[best_match_index]
+# Function to generate OpenAI response using RAG-like approach
+def chat_with_ai(user_question, website_text, pdf_text, chat_history):
+    # Generate embeddings for website and PDF content
+    pdf_embeddings = generate_embeddings(pdf_text)
+    website_embeddings = generate_embeddings(website_text)
 
-# Function to generate OpenAI response based on retrieved content
-def chat_with_ai(user_question, website_text, pdf_text, content_embeddings, documents, chat_history):
-    # Retrieve the most relevant content
-    relevant_content = retrieve_relevant_content(user_question, content_embeddings, documents)
+    # Generate embedding for user query
+    query_embedding = generate_embeddings(user_question)
 
-    # Combine the relevant content and user query for GPT model
+    # Calculate cosine similarity between query and document embeddings
+    pdf_similarity = calculate_cosine_similarity(query_embedding, [pdf_embeddings])[0][0]
+    website_similarity = calculate_cosine_similarity(query_embedding, [website_embeddings])[0][0]
+
+    # Select the most relevant document (PDF or Website) based on similarity score
+    if pdf_similarity > website_similarity:
+        most_relevant_content = pdf_text
+    else:
+        most_relevant_content = website_text
+
+    # Summarize the most relevant content
+    summarized_relevant_content = summarize_text(most_relevant_content)
+
+    # Combine context and user question for final GPT input
     combined_context = f"""
-    You have the following context to answer the question:
+    The most relevant information is as follows:
+    {summarized_relevant_content}
 
-    Relevant Content: {relevant_content}
-
-    User Question: {user_question}
+    Answer the user's question based on this context:
     """
-    
+
     messages = [
-        {"role": "system", "content": "As an Aibytec chatbot, you are responsible for guiding the user through Aibytec’s services."}
+        {"role": "system", "content": "You are an AI assistant providing answers based on relevant information."}
     ]
 
+    # Add previous chat history
     for entry in chat_history[-5:]:
         messages.append({"role": "user", "content": entry['user']})
         messages.append({"role": "assistant", "content": entry['bot']})
 
-    messages.append({"role": "user", "content": f"{combined_context}"})
+    messages.append({"role": "user", "content": f"{combined_context}\n\nQuestion: {user_question}"})
 
     try:
         response = openai.ChatCompletion.create(
@@ -114,49 +166,6 @@ def chat_with_ai(user_question, website_text, pdf_text, content_embeddings, docu
         return response['choices'][0]['message']['content']
     except Exception as e:
         return f"Error generating response: {e}"
-
-# Function to validate email
-def is_valid_email(email):
-    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
-
-# Function to validate name
-def is_valid_name(name):
-    return len(name) > 0
-
-# Function to validate contact number
-def is_valid_contact_no(contact_no):
-    return len(contact_no) >= 10 and len(contact_no) <= 15 and contact_no.isdigit()
-
-# Function to send email
-def send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode):
-    try:
-        subject = "New Profile Submission from AIByTec"
-        body = f"""
-        Name: {name}
-        Email: {email}
-        Contact No.: {contact_no}
-        
-        Specific Needs and Challenges: {specific_needs_and_challenges}
-        Training Preferred: {training}
-        Mode of Training: {mode_of_training}
-        Preferred Time/Mode of Contact: {prefered_time_contact_mode}
-        """
-        
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECIPIENT_EMAIL
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-        
-        # Send email via SMTP server
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, RECIPIENT_EMAIL, msg.as_string())
-        
-        return "Email sent successfully!"
-    except Exception as e:
-        return f"Error sending email: {e}"
 
 # ----------------------
 # Streamlit UI and App Logic
@@ -201,8 +210,7 @@ if st.session_state['page'] == 'form':
             elif not specific_needs_and_challenges or not training or not mode_of_training or not prefered_time_contact_mode:
                 st.warning("Please fill out all fields.")
             else:
-                email_status = send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
-                st.success(email_status)
+                send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
                 st.session_state['page'] = 'chat'
                 st.rerun()
         
@@ -224,52 +232,49 @@ elif st.session_state['page'] == 'chat':
     # Display chat history
     for entry in st.session_state['chat_history']:
         if entry['user']:  # Show user messages
-            st.markdown(f"<div>{entry['user']}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div style='display: flex; justify-content: flex-end; margin-bottom: 10px;'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <div style='color: #439DF6;'>👤</div>
+                        <div style='max-width: 70%; 
+                                    background-color: #439DF6; color: #fff; 
+                                    padding: 10px; border-radius: 10px;'>
+                            {entry['user']}
+                        </div>
+                    </div>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
         if entry['bot']:  # Show bot messages
-            st.markdown(f"<div>{entry['bot']}</div>", unsafe_allow_html=True)
-    
-    # Load PDF and Website content once
-    pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
-    website_text = scrape_website(WEBSITE_URL)
+            st.markdown(
+                f"""
+                <div style='display: flex; justify-content: flex-start; margin-bottom: 10px;'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <div style='color: #4a4a4a;'>🤖</div>
+                        <div style='max-width: 70%; 
+                                    background-color: #4a4a4a; color: #fff; 
+                                    padding: 10px; border-radius: 10px;'>
+                            {entry['bot']}
+                        </div>
+                    </div>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
 
-    # Combine the content and generate embeddings
-    documents = [pdf_text, website_text]
-    content_embeddings = get_embeddings([pdf_text, website_text])
+    user_question = st.text_input("Ask me anything:", "")
+    if user_question:
+        # Extract and process PDF/Website content
+        website_text = scrape_website(WEBSITE_URL)
+        pdf_text = extract_pdf_text(PDF_PATH)
+        
+        # Get AI response with RAG functionality
+        ai_answer = chat_with_ai(user_question, website_text, pdf_text, st.session_state['chat_history'])
+        
+        # Add to chat history
+        st.session_state['chat_history'].append({"user": user_question, "bot": ai_answer})
+        st.session_state['chat_history'] = st.session_state['chat_history'][-5:]  # Keep the last 5 messages
 
-    # Fixed input bar at bottom
-    user_input = st.chat_input("Type your question here...", key="user_input_fixed")
-    if user_input:
-        # Display bot's response
-        with st.spinner("Generating response..."):
-            bot_response = chat_with_ai(user_input, website_text, pdf_text, content_embeddings, documents, st.session_state['chat_history'])
-        # Append user query and bot response to chat history
-        st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
-        # Re-run to display updated chat history
-        st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        st.experimental_rerun()
