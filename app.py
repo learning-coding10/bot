@@ -176,11 +176,11 @@ if st.session_state['page'] == 'form':
             else:
                 send_email(name, email, contact_no, specific_needs_and_challenges, training, mode_of_training, prefered_time_contact_mode)
                 st.session_state['page'] = 'chat'
-                st.rerun()
+                st.experimental_rerun()  # Rerun only after successful form submission
         
         if continue_chat:
             st.session_state['page'] = 'chat'
-            st.rerun()
+            st.experimental_rerun()  # Rerun to switch to chat page
 
 # ----------------------
 # PAGE 2: Chatbot Interface
@@ -240,6 +240,6 @@ elif st.session_state['page'] == 'chat':
             bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
         # Append user query and bot response to chat history
         st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
-        # Re-run to display updated chat history
-        st.session_state['chat_history'] = st.session_state['chat_history'][-5:]  # Keep last 5 messages
+        # Limit chat history to 5 entries
+        st.session_state['chat_history'] = st.session_state['chat_history'][-5:]
         st.experimental_rerun()
