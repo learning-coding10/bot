@@ -9,8 +9,6 @@ import openai
 import os
 from dotenv import load_dotenv
 import re  # For validation
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 
 # ----------------------
 # Load Environment Variables
@@ -88,22 +86,7 @@ def scrape_website(url):
     except Exception as e:
         return f"Error scraping website: {e}"
 
-# Function to generate embeddings
-def generate_embeddings(text):
-    try:
-        response = openai.Embedding.create(
-            model="text-embedding-ada-002",  # OpenAI's embedding model
-            input=text
-        )
-        return response['data'][0]['embedding']
-    except Exception as e:
-        return f"Error generating embeddings: {e}"
-
-# Function to calculate cosine similarity
-def calculate_cosine_similarity(query_embedding, document_embeddings):
-    return cosine_similarity([query_embedding], document_embeddings)
-
-# Function to summarize content
+# Function to summarize content using OpenAI
 def summarize_text(text):
     try:
         response = openai.ChatCompletion.create(
@@ -117,41 +100,22 @@ def summarize_text(text):
     except Exception as e:
         return f"Error summarizing text: {e}"
 
-# Function to generate OpenAI response using RAG-like approach
+# Function to generate OpenAI response using RAG
 def chat_with_ai(user_question, website_text, pdf_text, chat_history):
-    # Generate embeddings for website and PDF content
-    pdf_embeddings = generate_embeddings(pdf_text)
-    website_embeddings = generate_embeddings(website_text)
+    summarized_pdf_text = summarize_text(pdf_text)
+    summarized_website_text = summarize_text(website_text)
 
-    # Generate embedding for user query
-    query_embedding = generate_embeddings(user_question)
-
-    # Calculate cosine similarity between query and document embeddings
-    pdf_similarity = calculate_cosine_similarity(query_embedding, [pdf_embeddings])[0][0]
-    website_similarity = calculate_cosine_similarity(query_embedding, [website_embeddings])[0][0]
-
-    # Select the most relevant document (PDF or Website) based on similarity score
-    if pdf_similarity > website_similarity:
-        most_relevant_content = pdf_text
-    else:
-        most_relevant_content = website_text
-
-    # Summarize the most relevant content
-    summarized_relevant_content = summarize_text(most_relevant_content)
-
-    # Combine context and user question for final GPT input
     combined_context = f"""
-    The most relevant information is as follows:
-    {summarized_relevant_content}
+    You are an assistant with access to two sources of information:
+    1. Website Content: {summarized_website_text}
+    2. PDF Content: {summarized_pdf_text}
 
-    Answer the user's question based on this context:
+    Use these sources to answer the user's question accurately and concisely.
     """
-
     messages = [
-        {"role": "system", "content": "You are an AI assistant providing answers based on relevant information."}
+        {"role": "system", "content": "As an Aibytec chatbot, you are responsible for guiding the user through Aibytec’s services. Your tone should be conversational yet professional, offering easy-to-understand explanations."}
     ]
 
-    # Add previous chat history
     for entry in chat_history[-5:]:
         messages.append({"role": "user", "content": entry['user']})
         messages.append({"role": "assistant", "content": entry['bot']})
@@ -263,18 +227,19 @@ elif st.session_state['page'] == 'chat':
                 """, 
                 unsafe_allow_html=True
             )
+    
+    # Load PDF and Website content once
+    pdf_text = extract_pdf_text(PDF_PATH) if os.path.exists(PDF_PATH) else "PDF file not found."
+    website_text = scrape_website(WEBSITE_URL)
 
-    user_question = st.text_input("Ask me anything:", "")
-    if user_question:
-        # Extract and process PDF/Website content
-        website_text = scrape_website(WEBSITE_URL)
-        pdf_text = extract_pdf_text(PDF_PATH)
-        
-        # Get AI response with RAG functionality
-        ai_answer = chat_with_ai(user_question, website_text, pdf_text, st.session_state['chat_history'])
-        
-        # Add to chat history
-        st.session_state['chat_history'].append({"user": user_question, "bot": ai_answer})
-        st.session_state['chat_history'] = st.session_state['chat_history'][-5:]  # Keep the last 5 messages
-
+    # Fixed input bar at bottom
+    user_input = st.chat_input("Type your question here...", key="user_input_fixed")
+    if user_input:
+        # Display bot's response
+        with st.spinner("Generating response..."):
+            bot_response = chat_with_ai(user_input, website_text, pdf_text, st.session_state['chat_history'])
+        # Append user query and bot response to chat history
+        st.session_state['chat_history'].append({"user": user_input, "bot": bot_response})
+        # Re-run to display updated chat history
+        st.session_state['chat_history'] = st.session_state['chat_history'][-5:]  # Keep last 5 messages
         st.experimental_rerun()
